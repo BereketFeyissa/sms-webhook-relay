@@ -71,17 +71,6 @@ Use `.env` or export these variables before running the container or app:
 
 Notes
 
-- TLS verification: outgoing requests use system CA certificates by default. For development you can disable verification by setting `DISABLE_TLS_VERIFY=true` in your environment (not recommended for production).
-- Alerts are expected to follow Grafana's webhook format with an `alerts` array containing `labels` and `annotations` objects.
-
-Continuous Integration
-
-This repository includes a GitHub Actions workflow to run tests on push and pull requests to `main`.
-
-Local tests
-
-```bash
-pip install -r requirements-dev.txt
-pytest -q
-```
+- The app currently performs outgoing requests with `httpx` and disables TLS verification in the client (`verify=False`) by default. For production use, ensure the gateway endpoint is trusted and remove `verify=False` or configure proper certificates.
+- Alerts are expected to follow Grafana's webhook format with `alerts` array containing `labels` and `annotations` objects.
 

@@ -1,28 +1,36 @@
-FROM python:3.11-slim
+# Stage 1: Build the virtual environment with dependencies
+FROM python:3.13.9-alpine3.21 AS builder
 
-# Prevent Python from writing pyc files and buffer stdout/stderr
-ENV PYTHONDONTWRITEBYTECODE=1 \
-	PYTHONUNBUFFERED=1
-
+# Set working directory
 WORKDIR /app
 
-# Create non-root user
-RUN groupadd -r app && useradd -r -g app app
+# Create a virtual environment
+RUN python -m venv /opt/venv
 
-# Install minimal system dependencies and install Python packages
-COPY requirements.txt ./
-RUN apt-get update && \
-	apt-get install -y --no-install-recommends ca-certificates && \
-	pip install --no-cache-dir --upgrade pip && \
-	pip install --no-cache-dir -r requirements.txt && \
-	apt-get purge -y --auto-remove && \
-	rm -rf /var/lib/apt/lists/* /root/.cache/pip
+# Activate virtual environment
+ENV PATH="/opt/venv/bin:$PATH"
 
-# Copy the project files and set ownership to the non-root user
-COPY --chown=app:app . /app
+# Copy requirements and install dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-USER app
+# Stage 2: Create the final, lean production image
+FROM python:3.13.9-alpine3.21
 
+# Set working directory
+WORKDIR /app
+
+# Copy the virtual environment from the builder stage
+COPY --from=builder /opt/venv /opt/venv
+
+# Copy the application code
+COPY webhook_relay.py .
+
+# Activate the virtual environment
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Expose the port the app will run on
 EXPOSE 8000
 
+# Command to run the application
 CMD ["uvicorn", "webhook_relay:app", "--host", "0.0.0.0", "--port", "8000"]
